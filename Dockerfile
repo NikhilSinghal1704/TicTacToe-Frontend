@@ -1,66 +1,45 @@
-# ===== Base Stage =====
-# Use a specific Node.js version for consistency.
-FROM node:20-slim AS base
+# Dockerfile
 
-# Set the working directory in the container.
+# 1. Installer Stage: Install dependencies
+FROM node:20-slim AS installer
 WORKDIR /app
 
-# Set the NODE_ENV environment variable.
-ENV NODE_ENV=production
-ENV PNPM_HOME="/pnpm"
-ENV PATH="$PNPM_HOME:$PATH"
-RUN corepack enable
-
-# Copy package manager files and install dependencies.
-# This layer is cached and will only be re-run if these files change.
+# Copy package.json and package-lock.json
 COPY package.json ./
-RUN pnpm install --prod --frozen-lockfile
+COPY package-lock.json* ./
 
-# ===== Build Stage =====
-# This stage builds the Next.js application.
-FROM node:20-slim AS build
+# Install dependencies
+RUN npm install
 
+# 2. Builder Stage: Build the Next.js application
+FROM node:20-slim AS builder
 WORKDIR /app
 
-ENV NODE_ENV=production
-ENV PNPM_HOME="/pnpm"
-ENV PATH="$PNPM_HOME:$PATH"
-RUN corepack enable
-
-COPY package.json ./
-
-# Install all dependencies, including devDependencies, for building.
-RUN pnpm install --frozen-lockfile
-
-# Copy the rest of the application source code.
+# Copy dependencies from installer stage
+COPY --from=installer /app/node_modules ./node_modules
+# Copy all other source files
 COPY . .
 
-# Build the Next.js application.
-RUN pnpm build
+# Environment variables can be added here
+# Example: ARG NEXT_PUBLIC_API_URL
+# ENV NEXT_PUBLIC_API_URL=$NEXT_PUBLIC_API_URL
 
-# ===== Production Stage =====
-# This is the final, optimized image for production.
-FROM node:20-slim AS production
+# Build the app
+RUN npm run build
 
+# 3. Runner Stage: Run the application
+FROM node:20-slim AS runner
 WORKDIR /app
 
+# Set environment to production
 ENV NODE_ENV=production
-ENV PNPM_HOME="/pnpm"
-ENV PATH="$PNPM_HOME:$PATH"
-RUN corepack enable
 
-# Copy the dependency installation from the 'base' stage.
-COPY --from=base /app/node_modules ./node_modules
-COPY --from=base /app/package.json ./
+# Copy the built app from the builder stage
+COPY --from=builder /app/public ./public
+COPY --from=builder /app/.next/standalone ./
+COPY --from=builder /app/.next/static ./.next/static
 
-# Copy the built application from the 'build' stage.
-# This includes the .next folder, public folder, and next.config.ts.
-COPY --from=build /app/.next ./.next
-COPY --from=build /app/public ./public
-COPY --from=build /app/next.config.ts ./next.config.ts
-
-# Expose the port the app will run on.
 EXPOSE 3000
 
-# The command to start the Next.js application in production mode.
-CMD ["pnpm", "start", "-p", "3000"]
+# The default command to run the app
+CMD ["node", "server.js"]
