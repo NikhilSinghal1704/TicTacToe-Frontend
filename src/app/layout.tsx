@@ -3,7 +3,7 @@ import { Toaster } from '@/components/ui/toaster';
 import './globals.css';
 
 export const metadata: Metadata = {
-  title: 'Noughts & Crosses Connect',
+  title: 'Tic Tac Toe',
   description: 'A beautiful, interactive Tic Tac Toe game.',
 };
 

@@ -11,7 +11,7 @@ export default function Home() {
             <div className="flex justify-center items-center gap-4 mb-2">
               <Swords className="h-10 w-10 text-primary" />
               <h1 className="text-4xl font-headline font-bold">
-                Noughts & Crosses Connect
+                Tic Tac Toe
               </h1>
             </div>
             <CardDescription>
